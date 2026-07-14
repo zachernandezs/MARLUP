@@ -1,7 +1,7 @@
 *.log
 *.nlo
 *.out
-*.pdf
+
 *.aux
 *~
 *.toc
