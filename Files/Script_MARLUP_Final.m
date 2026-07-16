@@ -7,6 +7,12 @@
 clear; clc;
 gain = 1;
 
+% Piezas CAD (.SLDPRT) que cargan los bloques File Solid del modelo:
+% se agregan al path para que los bloques las encuentren por nombre,
+% sin rutas absolutas (funciona en cualquier máquina del equipo).
+addpath(fullfile(fileparts(mfilename('fullpath')), ...
+    'Referencia', 'Sistema escalado', 'Sistema escalado'));
+
 %% === Geometría / Asignación de actuadores ===
 H  = 0.11;          % [m]
 Rb = 0.13;          % [m]
