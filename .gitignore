@@ -24,3 +24,9 @@
 *.soc
 *.thm
 *.synctex
+
+# Artefactos de compilación/caché de MATLAB y Simulink
+*.slxc
+slprj/
+*.asv
+*.autosave
