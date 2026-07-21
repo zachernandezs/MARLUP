@@ -10,12 +10,12 @@ MARLUP is a MATLAB/Simulink control-systems project for a wave-compensated stabi
 
 The core workflow is two files in `IAC/`:
 
-1. **`IAC/main.m`** — run this first in MATLAB. It defines the plant model and computes every gain/matrix the Simulink model needs, leaving them in the base workspace (`Ad`, `Bd`, `Cd`, `Kx`, `Ki`, `Ld`, `T`, `Tinv`, `P_reorder`, etc.). It also calls `addpath` to add `CAD/` to the MATLAB path, so the model's File Solid blocks resolve the `.SLDPRT` geometry by name on any machine (no hardcoded absolute paths).
-2. **`IAC/MARLUP_IAC.slx`** — the main Simulink model. It reads those workspace variables, so it fails if the script hasn't been run in the same session.
+1. **`IAC/marlup_init.m`** — run this first in MATLAB. It defines the plant model and computes every gain/matrix the Simulink model needs, leaving them in the base workspace (`Ad`, `Bd`, `Cd`, `Kx`, `Ki`, `Ld`, `T`, `Tinv`, `P_reorder`, etc.). It also calls `addpath` to add `CAD/` to the MATLAB path, so the model's File Solid blocks resolve the `.SLDPRT` geometry by name on any machine (no hardcoded absolute paths).
+2. **`IAC/marlup_model.slx`** — the main Simulink model. It reads those workspace variables, so it fails if the script hasn't been run in the same session.
 
-Simulink files (`.slx`), CAD files (`.SLDPRT`/`.SLDASM`), and media files are binary — they cannot be meaningfully read or edited as text. Changes to the model must be made in Simulink; only `IAC/main.m` is editable here.
+Simulink files (`.slx`), CAD files (`.SLDPRT`/`.SLDASM`), and media files are binary — they cannot be meaningfully read or edited as text. Changes to the model must be made in Simulink; only `IAC/marlup_init.m` is editable here.
 
-## Control Architecture (IAC/main.m)
+## Control Architecture (IAC/marlup_init.m)
 
 - **State vector**: `x = [roll(α), roll_rate, pitch(θ), pitch_rate, heave(z), heave_rate]`; outputs `y = [roll, pitch, heave]`. Inputs are `[τx, τy, Fz]`, mapped to the 3 physical actuator forces `[F1, F2, F3]` via the geometry matrix `T` / `Tinv`.
 - **Plant**: ideal double-integrator dynamics (no damping/stiffness), discretized with ZOH at `Ts = 0.01`. **Every discrete block in the Simulink model must use the same `Ts` as the script** — mismatched sample times are a known failure mode (the script's "Variables clave" comment block still says `Ts = 0.001` in a couple of places; the authoritative value is the `Ts` variable defined earlier, `0.01`).
@@ -26,7 +26,7 @@ Simulink files (`.slx`), CAD files (`.SLDPRT`/`.SLDASM`), and media files are bi
 
 ## Repository Layout
 
-- `CAD/` — SolidWorks parts (`.SLDPRT`) and the main assembly (`ably.SLDASM`) used by the Simulink model's File Solid blocks; `IAC/main.m` adds this folder to the MATLAB path (see Workflow above).
+- `CAD/` — SolidWorks parts (`.SLDPRT`) and the main assembly (`ably.SLDASM`) used by the Simulink model's File Solid blocks; `IAC/marlup_init.m` adds this folder to the MATLAB path (see Workflow above).
 - `DOCS/` — final project reports (PDF) and `DOCS/FIGS/` with result plots and simulation videos (binary).
 - `IAC/` — the active MATLAB script + Simulink model (see Workflow above).
 - Code comments and documentation are in Spanish; keep new comments consistent with that.
