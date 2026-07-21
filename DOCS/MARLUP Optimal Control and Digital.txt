@@ -1,0 +1,29 @@
+MARLUP: Optimal Control and Digital Twin Development of a Marine Launch Platform for Small Rocket Operations
+
+Countries with limited territory face significant constraints when developing conventional ground-based launch infrastructure. In the case of Costa Rica, the combination of a small geographical area, protected environmental regions, and limited flat terrain motivates the exploration of alternative launch architectures. The MARLUP (Marine Launchpad) project proposes a floating launch platform capable of supporting small rockets (Class A–H), enabling offshore launch operations for small launch vehicles while minimizing land-use limitations.
+The platform is designed as a Stewart-type stabilization system supported by three linear actuators. The system focuses on controlling three degrees of freedom: roll, pitch, and vertical displacement (heave), which represent the dominant disturbances caused by waves and the tide. The dynamic behavior of the system was derived analytically using rigid-body dynamics and represented in a state-space formulation, modeling the platform as a nonlinear multi-input multi-output (MIMO) system. A digital twin of the platform was implemented in MATLAB/Simulink using the Simscape Multibody environment, integrating CAD geometries developed in SolidWorks to replicate the mechanical configuration of the system.
+To approximate realistic operational conditions, the model incorporates environmental disturbances and non-ideal sensing behavior. Sensor models include measurement noise, quantization effects, and sampling limitations, representative of real embedded measurement systems. Ocean disturbances were modeled using the Pierson–Moskowitz wave spectrum over directional spreading functions to simulate calm-sea launch conditions and generate perturbations the three degrees of freedom.
+The control architecture integrates an optimal controller, together with a state estimator to reconstruct unmeasured dynamic states and improve disturbance rejection. The controller design was discretized and executed using a Processor-in-the-Loop (PiL) configuration. This allowed the control algorithm to be executed on an embedded microcontroller, while the plant dynamics remained simulated in real time on the computer running the digital twin. 
+Simulation results show that the proposed control strategy improves stabilization performance and computational efficiency, compared with previous decentralized control approaches. The controlled theoretical model achieves stabilization within approximately 10 seconds with minimal overshoot while maintaining the desired vertical position under wave-induced disturbances.
+These results demonstrate the feasibility of implementing an actively stabilized floating launch platform. The MARLUP framework establishes a validated digital twin and control architecture that can serve as a technological foundation for future experimental work and for the development of maritime launch infrastructure in emerging space nations.
+
+Keywords:
+Optimal control
+LQR
+Kalman filter
+Stewart platform
+digital twin
+marine launch platform
+Processor-in-the-Loop
+
+
+Aarón Salas Alvarado
+aasalas@estudiantec.com
+
+
+Alvaro Perez Mora
+alvaroenrique2001@estudiantec.cr
+
+
+William Smith Hernandez
+zachernandezs@estudiantec.cr
