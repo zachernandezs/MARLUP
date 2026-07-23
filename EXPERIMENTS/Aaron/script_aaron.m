@@ -10,7 +10,7 @@ gain = 1;
 % Piezas CAD (.SLDPRT) que cargan los bloques File Solid del modelo:
 % se agregan al path para que los bloques las encuentren por nombre,
 % sin rutas absolutas (funciona en cualquier máquina del equipo).
-addpath(fullfile(fileparts(mfilename('fullpath')), '..', 'CAD'));
+addpath(fullfile(fileparts(mfilename('fullpath')), '..', '..', 'CAD'));
 
 %% === Geometría / Asignación de actuadores ===
 H  = 0.11;          % [m]
@@ -77,7 +77,7 @@ G  = eye(6);   % n×w → w = 6
 Qx = 30 * diag([1e-6 1e-3 1e-6 1e-3 1e-6 1e-3]);  % ×30 de proceso
 
 % Medición: roll/pitch 0.5°, heave 3 mm
-Rn = diag([(0.5*pi/180)^2, (0.5*pi/180)^2, (3e-3)^2]);
+Rn = diag([(10*pi/180)^2, (10*pi/180)^2, (3e-3)^2]);
 N  = zeros(6,3);  % w×p = 6×3
 
 % Chequeo
@@ -163,3 +163,15 @@ disp(Ld);
 
 disp('P_reorder (oleaje→salidas del modelo):');
 disp(P_reorder);
+
+
+%% PID AARON
+zeta = 0.9;  wn = 8;  p = 4;  Nf = 50;
+
+pid_gains = @(J) deal( J*wn^2*(1 + 2*zeta*p), ...   % Kp
+                       J*p*wn^3, ...                 % Ki
+                       J*wn*(2*zeta + p) );          % Kd
+
+[Kp_roll,  Ki_roll,  Kd_roll ] = pid_gains(Jx)
+[Kp_pitch, Ki_pitch, Kd_pitch] = pid_gains(Jy)
+[Kp_heave, Ki_heave, Kd_heave] = pid_gains(M_Plato)
