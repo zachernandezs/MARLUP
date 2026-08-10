@@ -175,3 +175,19 @@ pid_gains = @(J) deal( J*wn^2*(1 + 2*zeta*p), ...   % Kp
 [Kp_roll,  Ki_roll,  Kd_roll ] = pid_gains(Jx)
 [Kp_pitch, Ki_pitch, Kd_pitch] = pid_gains(Jy)
 [Kp_heave, Ki_heave, Kd_heave] = pid_gains(M_Plato)
+
+
+
+zeta = 0.9;
+wn_r = 8;
+wn_p = 1;
+wn_z  = 3;
+p = 4;
+
+pid_gains = @(J,wn) deal( J*wn^2*(1 + 2*zeta*p), ...
+                          J*p*wn^3, ...
+                          J*wn*(2*zeta + p) );
+
+[Kp_roll,  Ki_roll,  Kd_roll ] = pid_gains(Jx, wn_r);
+[Kp_pitch, Ki_pitch, Kd_pitch] = pid_gains(Jy, wn_p);
+[Kp_heave, Ki_heave, Kd_heave] = pid_gains(M_Plato, wn_z);
