@@ -165,13 +165,18 @@ disp('P_reorder (oleaje→salidas del modelo):');
 disp(P_reorder);
 
 
-%% PID AARON
-zeta = 0.9;  wn = 8;  p = 4;  Nf = 50;
+%% PID AARON(HAY QUE AJUSTAR wn_p, es el ancho de banda del controlador del pitch)
 
-pid_gains = @(J) deal( J*wn^2*(1 + 2*zeta*p), ...   % Kp
-                       J*p*wn^3, ...                 % Ki
-                       J*wn*(2*zeta + p) );          % Kd
+zeta = 0.9;
+wn_r = 8;
+wn_p = 10;
+wn_z  = 8;
+p = 4;
 
-[Kp_roll,  Ki_roll,  Kd_roll ] = pid_gains(Jx)
-[Kp_pitch, Ki_pitch, Kd_pitch] = pid_gains(Jy)
-[Kp_heave, Ki_heave, Kd_heave] = pid_gains(M_Plato)
+pid_gains = @(J,wn) deal( J*wn^2*(1 + 2*zeta*p), ...
+                          J*p*wn^3, ...
+                          J*wn*(2*zeta + p) );
+
+[Kp_roll,  Ki_roll,  Kd_roll ] = pid_gains(Jx, wn_r);
+[Kp_pitch, Ki_pitch, Kd_pitch] = pid_gains(Jy, wn_p);
+[Kp_heave, Ki_heave, Kd_heave] = pid_gains(M_Plato, wn_z);
