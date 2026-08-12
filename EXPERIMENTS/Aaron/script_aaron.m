@@ -169,7 +169,7 @@ disp(P_reorder);
 
 zeta = 0.9;
 wn_r = 8;
-wn_p = 10;
+wn_p = 8;
 wn_z  = 8;
 p = 4;
 
