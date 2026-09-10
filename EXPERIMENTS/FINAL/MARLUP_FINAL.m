@@ -1,6 +1,12 @@
 clear;
 clc;
 
+scriptDir = fileparts(mfilename('fullpath'));
+if isempty(scriptDir), scriptDir = pwd; end
+cadDir = fullfile(scriptDir, '..', '..', 'CAD');
+assert(isfolder(cadDir), 'No existe la carpeta CAD en: %s', cadDir);
+addpath(cadDir);
+
 Ts   = 0.01;           % sample time [s]  (10 ms, same as the PiL)
 dF   = 400;            % probe force per piston [N]
 T_id = 0.06;           % length of each probe run [s]

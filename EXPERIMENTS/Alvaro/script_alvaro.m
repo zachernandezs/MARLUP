@@ -10,8 +10,11 @@ gain = 1;
 % Piezas CAD (.SLDPRT) que cargan los bloques File Solid del modelo:
 % se agregan al path para que los bloques las encuentren por nombre,
 % sin rutas absolutas (funciona en cualquier máquina del equipo).
-addpath(fullfile(fileparts(mfilename('fullpath')), '..', 'CAD'));
-
+scriptDir = fileparts(mfilename('fullpath'));
+if isempty(scriptDir), scriptDir = pwd; end
+cadDir = fullfile(scriptDir, '..', '..', 'CAD');
+assert(isfolder(cadDir), 'No existe la carpeta CAD en: %s', cadDir);
+addpath(cadDir);
 %% === Geometría / Asignación de actuadores ===
 H  = 0.11;          % [m]
 Rb = 0.13;          % [m]
@@ -163,3 +166,21 @@ disp(Ld);
 
 disp('P_reorder (oleaje→salidas del modelo):');
 disp(P_reorder);
+
+
+%% -----------------------------------------------------------
+
+%% Señales de excitación para el experimento de identificación
+Ts_id = 0.01;                        % Tₛ fijo del registro [s] — ~100x el ancho de banda objetivo (5-6 rad/s)
+N     = 6000;                        % 60 s por experimento
+t     = (0:N-1)'*Ts_id;
+
+% Dither independiente para F1,F2,F3 (PRBS de banda ancha, ±10% de F_trim)
+F_trim = 435;                        % N por actuador, del punto de equilibrio ya calculado
+dF     = idinput([N,3], 'prbs', [0 1], [-0.10*F_trim, 0.10*F_trim]);
+F_test = F_trim + dF;                % N x 3, listo para el From Workspace
+Fsig   = [t, F_test];
+
+% Entorno de prueba de banda ancha para pz,qx,qy (independiente entre canales)
+Q_test = idinput([N,3], 'prbs', [0 0.3], [-0.15, 0.15]);   % dentro del rango físico (0.1–3 m)
+Qsig   = [t, Q_test];
