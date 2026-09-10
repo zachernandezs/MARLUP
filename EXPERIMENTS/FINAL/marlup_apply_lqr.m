@@ -17,7 +17,7 @@ function marlup_apply_lqr(des, mdl)
 if nargin < 1 || isempty(des)
     S = load('marlup_design.mat'); des = S.des;
 end
-if nargin < 2 || isempty(mdl), mdl = 'Model_will'; end
+if nargin < 2 || isempty(mdl), mdl = 'MARLUP_sinKF'; end
 
 load_system(mdl);
 
