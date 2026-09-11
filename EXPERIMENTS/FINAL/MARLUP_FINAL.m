@@ -84,7 +84,7 @@ K_deg    = K * S_deg2si;
 % dF = K*(r - xhat) - dhat, which removes the steady state error.
 
 estimator     = 'kalman';   % 'kalman' | 'luenberger'
-estimate_bias = true;       % true: augment with 3 force bias states
+estimate_bias = false;      % true: augment with 3 force bias states
 noise_on      = 1;          % 1: add sensor noise in Simulink, 0: clean
 
 sigma_F   = 20;              % N, force / model uncertainty
@@ -141,8 +141,90 @@ else
 end
 r_ref = [0; 0; 0; 0; 1.8; 0; zeros(nd,1)];
 
+%% 5. MATRICES PARA EL BLOQUE "KALMAN FILTER" DE SIMULINK ----------------
+% El bloque Kalman Filter (Control System Toolbox) hace por dentro lo mismo
+% que el subsistema "Estimador" de la seccion 4, pero pide las matrices ya
+% preparadas. Con "Model source = Individual A, B, C, D matrices" el modelo
+% que asume el bloque es:
+%
+%   x[k+1] = A*x[k] + B*u[k] + G*w[k]
+%   y[k]   = C*x[k] + D*u[k] + H*w[k] + v[k]
+%   E{w*w'} = Q,   E{v*v'} = R,   E{w*v'} = N
+%
+% con u[k] = dF = F - F_trim  [N]  y  y[k] = [roll; pitch; z] en rad y m
+% (si el bus de la planta trae los angulos en grados, multiplicar antes por
+% Cmeas / S_deg2si, igual que en el subsistema Estimador).
+%
+% Pestanas del bloque:
+%   Model Parameters : A, B, C, D, Sample time, Initial states x[0],
+%                      State estimation error covariance P[0]
+%   Options          : G, H, Q, R, N  (Noise characteristics)
 
-%% 5. SUMMARY ------------------------------------------------------------
+use_bias_in_kf = estimate_bias;   % true: filtro sobre el modelo aumentado
+
+if use_bias_in_kf
+    % Modelo aumentado con los 3 estados de bias de fuerza (9 estados)
+    KF_A = Ae;   KF_B = Be;   KF_C = Ce;
+    KF_Gf = Ge;                 % ruido fisico: fuerza + deriva del bias
+    KF_Qf = Qe;                 % blkdiag(sigma_F^2*I, sigma_d^2*I)
+else
+    % Modelo simple de 6 estados (roll, pitch, z y sus velocidades)
+    KF_A = Ad;   KF_B = Bd;   KF_C = Cd;
+    KF_Gf = Bd;                 % el ruido de proceso entra como fuerza
+    KF_Qf = Qn;                 % sigma_F^2 * I(3)
+end
+
+nx_kf = size(KF_A,1);           % 6 sin bias, 9 con bias
+nu_kf = size(KF_B,2);           % 3 fuerzas
+ny_kf = size(KF_C,1);           % 3 medidas
+
+% El bloque solo usa el producto G*Q*G', pero exige que la matriz
+% [G*Q*G' , G*Q*H'+G*N ; ... , R] sea semidefinida positiva y lo comprueba
+% con tolerancia cero. Bd*Qn*Bd' tiene rango 3 sobre 6 estados, es decir es
+% singular, y el redondeo deja autovalores del orden de -1e-22 que el
+% bloque rechaza aunque en relativo sean cero. Por eso se le entrega el
+% ruido ya proyectado sobre los estados (G = I): se simetriza, se recortan
+% los autovalores negativos de redondeo y se anade una cresta despreciable
+% (1e-12 relativo) que garantiza PSD estricta sin alterar el filtro.
+Qw = KF_Gf * KF_Qf * KF_Gf.';
+Qw = (Qw + Qw.')/2;
+[Vq, Dq] = eig(Qw);
+dq = max(real(diag(Dq)), 0);
+Qw = Vq*diag(dq)*Vq.';
+Qw = (Qw + Qw.')/2 + (max(dq)*1e-12)*eye(nx_kf);
+
+KF_G = eye(nx_kf);              % ruido ya expresado sobre los estados
+KF_Q = Qw;                      % = Gf*Qf*Gf' regularizada
+nw_kf = size(KF_G,2);           % entradas de ruido de proceso
+
+KF_D = zeros(ny_kf, nu_kf);     % sin transmision directa de la fuerza
+KF_H = zeros(ny_kf, nw_kf);     % w no llega directo a la salida
+KF_R = Rn;                      % diag([sigma_ang^2 sigma_ang^2 sigma_z^2])
+KF_N = zeros(nw_kf, ny_kf);     % w y v independientes
+
+% Condiciones iniciales del bloque
+KF_x0 = [0; 0; 0; 0; z0; 0; zeros(nx_kf-6,1)];   % arranca en la pose montada
+KF_P0 = diag([(1*pi/180)^2, (5*pi/180)^2, ...    % roll, roll_dot
+              (1*pi/180)^2, (5*pi/180)^2, ...    % pitch, pitch_dot
+               0.02^2,       0.10^2, ...         % z, z_dot
+               repmat((5*sigma_F)^2, 1, nx_kf-6)]);  % bias de fuerza
+
+% Escalado del bus del sensor: la planta entrega los angulos en grados
+% (ganancias 180/pi dentro de PLANT - PLATFORM) mientras que Cd trabaja en
+% rad. Este bloque va entre la salida Y_sensado y la entrada y del filtro.
+S_meas = diag([pi/180, pi/180, 1]);   % [deg; deg; m] -> [rad; rad; m]
+
+% Comprobacion: el bloque debe converger a la misma ganancia que kalman()
+assert(rank(obsv(KF_A, KF_C)) == nx_kf, 'El modelo del KF no es observable');
+Mpsd = [KF_G*KF_Q*KF_G.',                        KF_G*KF_Q*KF_H.' + KF_G*KF_N;
+       (KF_G*KF_Q*KF_H.' + KF_G*KF_N).',         KF_H*KF_Q*KF_H.' + KF_H*KF_N + KF_N.'*KF_H.' + KF_R];
+assert(min(eig((Mpsd+Mpsd.')/2)) >= 0, 'La matriz de ruido del bloque no es PSD');
+sys_kf_blk = ss(KF_A, [KF_B KF_G], KF_C, [KF_D KF_H], Ts);
+[~, L_kf, ~, M_kf] = kalman(sys_kf_blk, KF_Q, KF_R, KF_N);
+assert(max(abs(eig(KF_A - L_kf*KF_C))) < 1, 'El KF no es estable');
+
+
+%% 6. SUMMARY ------------------------------------------------------------
 fprintf('\n--- Results ---------------------------------------------\n');
 fprintf('Sample time      : %.3f s\n', Ts);
 fprintf('F_trim           : [%.1f %.1f %.1f] N\n', F_trim);
@@ -151,9 +233,15 @@ fprintf('max|K|           : %.2f\n', max(abs(K(:))));
 fprintf('Estimator        : %s, bias states = %d\n', estimator, nd);
 fprintf('max closed loop |z| : %.4f  (must be < 1)\n', max(abs(eig(Ad - Bd*K))));
 fprintf('max observer   |z| : %.4f  (must be < 1)\n', max(abs(eig(Ae - L_est*Ce))));
+fprintf('KF block states  : %d (bias incluido: %d)\n', nx_kf, use_bias_in_kf);
+fprintf('max KF block   |z| : %.4f  (must be < 1)\n', max(abs(eig(KF_A - L_kf*KF_C))));
 fprintf('\nNext: run crear_estimador.m (builds MARLUP_conKF.slx). Blocks:\n');
 fprintf('  Control gain         ->  K_ctrl\n');
 fprintf('  References           ->  r_ref\n');
 fprintf('  piston bias constant ->  F_trim\n');
 fprintf('  Estimador subsystem  ->  Aest, Best, Cest, x0_hat, Cmeas, Rn, noise_on\n');
+fprintf('\nBloque "Kalman Filter" (Model Parameters / Options):\n');
+fprintf('  A,B,C,D = KF_A, KF_B, KF_C, KF_D    Sample time = Ts\n');
+fprintf('  x[0] = KF_x0    P[0] = KF_P0\n');
+fprintf('  G,H = KF_G, KF_H    Q,R,N = KF_Q, KF_R, KF_N\n');
 fprintf('---------------------------------------------------------\n');
