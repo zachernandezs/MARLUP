@@ -1,0 +1,577 @@
+% ==================================================================
+% IAC-26-D2.2.12.x114322 -- MARLUP paper skeleton
+% Limit: 15 pages (US Letter, two columns), including abstract,
+% figures and references; PDF only, max 5 MB; deadline 14 Sep 2026.
+%
+% Current length with placeholders: see compiled PDF (target <= 11 pages
+% before the PiL and wave results are written; hard limit 15).
+%
+% Figures in pics/ (PNG). "real" = rendered from the TikZ/pgfplots
+% sources in figsrc/ (data from the identification/LQR document);
+% "placeholder" = to be replaced keeping the file name.
+%   fig01_marlup_concept        placeholder  CAD render of the platform
+%   fig02_geometry              real         side/top geometry
+%   fig03_wave_disturbance      placeholder  P-M base motion
+%   fig04_uz_comparison         real         assumed vs measured u_z
+%   fig05_digital_twin          placeholder  Simscape Multibody model
+%   fig06_ident_setup           real         identification configuration
+%   fig07_ident_fit             real         roll-rate traces, fit window
+%   fig08_poles                 real         closed-loop eigenvalues
+%   fig09_control_architecture  real         closed loop with KF
+%   fig10_pil_setup             placeholder  host PC <-> microcontroller
+%   fig11_sil_vs_pil            placeholder  SiL vs PiL responses
+%   fig12_sensitivity           real         |S(jw)| with P-M spectrum
+%   fig13_step_forces           real         step responses + forces
+%   fig14_digital_twin_waves    placeholder  double column, wave results
+% Search for \todo{ and "TODO" to find every open item.
+% ==================================================================
+\documentclass[]{IAC_style}
+
+% ------------------------------------------------------------------
+% Additional packages (the class already loads graphicx, float,
+% tabularx, booktabs, hyperref, cite and newtx fonts)
+% ------------------------------------------------------------------
+\usepackage{amsmath,bm} % symbols come from newtxmath (amssymb clashes with it)
+\usepackage{xcolor}
+
+% Editorial marker: prints red notes in the draft.
+% For the final version replace the definition by \newcommand{\todo}[1]{}
+\newcommand{\todo}[1]{\textcolor{red}{\textbf{[TODO:} #1\textbf{]}}}
+
+% Notation
+\newcommand{\W}{\bm{W}}
+\newcommand{\Amat}{\bm{A}}
+\newcommand{\Bmat}{\bm{B}}
+\newcommand{\Cmat}{\bm{C}}
+\newcommand{\Kmat}{\bm{K}}
+\newcommand{\Mmat}{\bm{M}}
+\newcommand{\Jmat}{\bm{J}}
+\newcommand{\qv}{\bm{q}}
+\newcommand{\xv}{\bm{x}}
+\newcommand{\uv}{\bm{u}}
+\newcommand{\Fv}{\bm{F}}
+\newcommand{\cv}{\bm{c}}
+\newcommand{\dd}{\mathrm{d}}
+\newcommand{\un}[1]{\,\mathrm{#1}}
+\newcolumntype{L}{>{\raggedright\arraybackslash}X}
+\newcommand{\nom}[2]{\par\noindent\hangindent=2.6cm\hangafter=1\makebox[2.6cm][l]{#1}#2}
+
+\begin{document}
+
+\IACpaperyear{2026}
+\IACconference{77}
+\IACpapernumber{IAC-26,D2,2,12,x114322}
+\IAClocation{Antalya, T\"urkiye}
+\IACdate{5-9 October 2026}
+
+% Copyright form B1 (retained by the author). Confirm the form selected
+% in the IAF upload system; the wording must match it exactly.
+\IACcopyrightB{Mr. \'Alvaro P\'erez Mora}
+
+% Title must be identical to the accepted abstract.
+\title{Development of an Actively Stabilized Marine Launch Platform for Small Rocket Launch Operations}
+
+%\IACauthor{Author name}{affiliation index}{is corresponding author? 0-1}
+\IACauthor{\'Alvaro P\'erez Mora$^{\orcidlink{0009-0004-1847-6741}}$}{2}{1}
+\IACauthor{Aar\'on David Salas Alvarado$^{\orcidlink{0009-0001-7957-4546}}$}{2}{1} % TODO: add \orcidlink if available
+\IACauthor{William Smith Hern\'andez$^{\orcidlink{0009-0003-1756-4718}}$}{2}{1}    % TODO: add \orcidlink if available
+
+
+\IACauthoraffiliation{School of Electronics Engineering,Technical Institute of Costa Rica (ITCR), Cartago, Costa Rica.} % TODO: confirm e-mails
+
+\abstract{
+Costa Rica is a small contry of around 51,100 square kilometers of area, and it has extensive protected regions and scarce flat terrain, which constrains ground-based launch infrastructure and motivates alternative launch architectures. The MARLUP (Marine Launchpad) project proposes an actively stabilized floating launch platform for small rockets (motor classes A through H). The launch platform is based on a Stewart-type mechanism, with three linear actuators that control the roll, pitch and vertical displacement (heave) of the top plate, and mitigate the dominant disturbances induced by waves and tide. The dynamics were formulated from rigid-body mechanics as a nonlinear multi-input multi-output system and cast in state-space form. A digital twin was implemented in MATLAB/Simulink with Simscape Multibody from CAD geometry, including noisy, quantized and sampled sensor models and calm-sea disturbances generated from a Pierson-Moskowitz spectrum with directional spreading. Since the simplified analytic model used in earlier stages misrepresented the effective actuator geometry and inertia of the closed-chain mechanism, the force-to-acceleration map of the platform was identified directly from the digital twin through four short simulations and validated against an independent superposition prediction. On the identified model, an integral linear quadratic regulator with closed-form weights places the closed-loop bandwidth five to six times above the wave spectral peak, and a state estimator reconstructs the unmeasured states. The controller was discretized and executed in a Processor-in-the-Loop configuration, running on an embedded microcontroller while the digital twin was simulated in real time on a host computer. Compared with the previous decentralized and model-based control stages, the proposed strategy raises the wave attenuation at the spectral peak from $6$ dB to between $31$ and $38$ dB, settles within approximately $10$ s with minimal overshoot while holding the commanded heave, and reduces the simulation cost from hours to minutes. These results demonstrate the feasibility of an actively stabilized floating launch platform and establish a validated digital twin and control architecture for future experimental work and maritime launch infrastructure in emerging space nations.
+}
+
+\maketitle
+\thispagestyle{fancy}
+
+% ==================================================================
+\section*{Nomenclature}
+% Breakable list (a tabular cannot split across columns)
+\nom{$\alpha,\ \theta$}{roll and pitch angles of the plate (rad)}
+\nom{$z$}{heave, plate height (m)}
+\nom{$\qv$}{generalized coordinates $[\alpha\ \theta\ z]^\top$}
+\nom{$\xv$}{state vector $[\alpha\ \dot\alpha\ \theta\ \dot\theta\ z\ \dot z]^\top$}
+\nom{$\Fv$}{actuator force vector $[F_1\ F_2\ F_3]^\top$ (N)}
+\nom{$\Fv_\mathrm{trim}$}{static equilibrium force vector (N)}
+\nom{$\W$}{force-to-acceleration map ($3\times3$)}
+\nom{$\cv$}{gravitational bias acceleration}
+\nom{$\Mmat(\qv),\ \Jmat(\qv)$}{generalized inertia matrix, inverse-kinematics Jacobian}
+\nom{$\bm{\xi}$}{integral state}
+\nom{$H_s,\ T_p,\ \omega_p$}{significant wave height, peak period, peak frequency}
+\nom{$\omega_n,\ \zeta,\ \omega_i$}{closed-loop natural frequency, damping ratio, integrator pole}
+\nom{$u_z$}{vertical direction cosine of an actuator}
+\nom{$T_s$}{controller sampling period (s)}
+\par
+
+\section*{Acronyms/Abbreviations}
+Attitude and heading reference system (AHRS), degree of freedom (DOF), Kalman filter (KF), linear quadratic regulator (LQR), Marine Launchpad (MARLUP), multi-input multi-output (MIMO), Pierson--Moskowitz (P--M), Processor-in-the-Loop (PiL), Software-in-the-Loop (SiL), zero-order hold (ZOH).
+
+% ==================================================================
+\section{Introduction}
+\label{sec:intro}
+Access to launch infrastructure remains one of the main barriers for emerging space nations. Ground-based launch sites require large uninhabited areas, safety exclusion zones along the flight corridor and stable, flat terrain. Costa Rica combines a small national territory, a large fraction of land under environmental protection and a mountainous topography, which makes a conventional launch range, even for small suborbital vehicles, difficult to justify. % TODO: add a source for land area and protected-area fraction (e.g., SINAC).
+Launching from the sea removes most of these constraints, since the launch site can be relocated to open water where range safety is easier to guarantee.
+
+Sea-based launch has precedents at very different scales, from the fixed San Marco platform off the coast of Kenya to the floating Sea Launch system and the more recent ship-based launches of small orbital vehicles \cite{sanmarco,sealaunch}. For small rockets, however, the floating base is itself a moving support: wave-induced roll, pitch and heave perturb the alignment of the launch rail and the initial attitude of the vehicle at lift-off. Parallel mechanisms derived from the Stewart platform \cite{stewart1965,dasgupta2000,merlet2006} are the established solution for compensating such motions, and active motion compensation is routinely used offshore, for example in motion-compensated gangways for wind turbine access \cite{cerda2010}. A reduced three-actuator architecture that controls only roll, pitch and heave addresses the motions that dominate launch alignment while keeping mass, cost and power consumption compatible with a student-led project.
+
+The MARLUP project, developed within TECSpace at the Instituto Tecnol\'ogico de Costa Rica, follows this approach. The hexagonal floating base was sized from buoyancy and stability criteria \cite{perez2025flot}. A first Simscape Multibody model of the stabilization mechanism was controlled with one decentralized PID loop per axis, under sinusoidal waves and ideal sensors, and required several hours of computation for a few seconds of response \cite{gonzalez2025}. A second stage replaced the PID loops with a linear quadratic regulator (LQR) and a KF designed on a simplified analytic model, added a P--M wave model and non-ideal sensors, and executed the controller on a microcontroller in a PiL configuration; applied to the multibody digital twin, however, this controller achieved only marginal stability for about 20 s \cite{perez2025stage2}. The recommendation of that stage was to identify the simulated plant instead of assuming it.
+
+This paper reports the resulting design. Its contributions are a digital twin of the platform with realistic disturbances and sensing, a diagnosis of why the rigid-body simplification commonly used for such platforms fails for a closed-chain mechanism whose legs are comparable in size to the plate, a non-invasive identification procedure that is exact at the operating point and is validated by an independent prediction, an integral LQR with closed-form weights whose bandwidth is placed deliberately with respect to the wave spectrum, and the execution of the discretized controller and estimator in PiL. Section~\ref{sec:system} describes the system and its environment, Section~\ref{sec:model} the dynamic model, Section~\ref{sec:ident} the identification, Section~\ref{sec:control} the control and estimation design, Section~\ref{sec:pil} the PiL implementation, Section~\ref{sec:results} the results, and Section~\ref{sec:concl} the conclusions.
+
+% ==================================================================
+\section{System description}
+\label{sec:system}
+
+\subsection{Launch platform concept}
+The MARLUP concept, shown in Fig.~\ref{fig:cad}, consists of a hexagonal floating base with six lateral floats and a central float, sized by Archimedes' principle to carry the structure, the launch plate and the lift-off load with a $25\%$ margin \cite{perez2025flot}. The stabilization mechanism is mounted on the floating base and carries the launch plate, which must remain level and at a commanded height during launch preparation and lift-off. The operating envelope is restricted to calm-sea launch windows. \todo{state the design sea state ($H_s$ range) and the target rocket envelope (mass, rail length).}
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=\columnwidth]{pics/fig01_marlup_concept.png}
+\caption{MARLUP concept: hexagonal floating base, three-actuator stabilization mechanism and launch plate (SolidWorks model).}
+\label{fig:cad}
+\end{figure}
+
+\subsection{Stabilization mechanism}
+The moving platform is a circular plate of mass $M=67.7\un{kg}$ carried by three linear actuators (Fig.~\ref{fig:geom}). The lower anchors lie on a small inverted triangular pyramid ($H=0.11\un{m}$, circumscribed radius $R_b=0.13\un{m}$) attached to the floating structure through a four-DOF joint. The upper anchors are distributed on a circle of radius $R_t=0.65\un{m}$ at azimuths $\varphi_i=\{-30^\circ,90^\circ,210^\circ\}$, and the plate rests at $z_0=1.5716\un{m}$ in the assembled configuration. The actuators are modeled after a double-acting hydraulic cylinder (Bosch Rexroth CDH1 MP3, $250$ bar, $12.5\un{cm^2}$ piston area, $\pm0.28\un{m}$ usable stroke) and are represented in the digital twin as ideal force sources. The controlled coordinates are $\qv=[\alpha\ \theta\ z]^\top$.
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=\columnwidth]{pics/fig02_geometry.png}
+\caption{Geometry of the stabilization mechanism (schematic, not to scale): side view with the measured actuator inclination of $34.3^\circ$ from vertical, and top view of the plate anchors.}
+\label{fig:geom}
+\end{figure}
+
+\subsection{Sensing}
+Roll and pitch are measured by an AHRS model based on the 3DM-GX5 and heave by an ultrasonic range sensor model based on the MB1040. Each measurement includes additive white Gaussian noise and quantization, and all signals are sampled at $T_s=10\un{ms}$, the period of the PiL target. \todo{list noise standard deviations and quantization steps used.}
+
+\subsection{Wave disturbance model}
+The sea state is generated from the P--M spectrum \cite{pm1964,fossen2011},
+\begin{equation}
+S_\eta(\omega)=\frac{5}{16}\,\frac{H_s^2\,\omega_p^4}{\omega^5}\exp\!\left[-\frac{5}{4}\left(\frac{\omega_p}{\omega}\right)^{4}\right],
+\label{eq:pm}
+\end{equation}
+combined with a $\cos^2$ directional spreading function. The peak period $T_p=10\un{s}$ gives $\omega_p=2\pi/T_p=0.628\un{rad/s}$, the frequency that governs the control specification of Section~\ref{sec:control}. The free-surface elevation at the origin defines the heave of the base, and its spatial gradients define the base roll and pitch, which are imposed through the four-DOF joint (Fig.~\ref{fig:waves}). \todo{state $H_s$, number of wave components and seed.}
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=\columnwidth]{pics/fig03_wave_disturbance.png}
+\caption{Base motion generated by the P--M model ($T_p=10$ s): heave, roll and pitch imposed on the floating structure.}
+\label{fig:waves}
+\end{figure}
+
+% ==================================================================
+\section{Dynamic model and digital twin}
+\label{sec:model}
+
+\subsection{Rigid-body formulation}
+For a rigid multibody mechanism with independent generalized coordinates $\qv$, Lagrangian mechanics gives \cite{merlet2006}
+\begin{equation}
+\Mmat(\qv)\,\ddot{\qv}+\bm{h}(\qv,\dot{\qv})=\Jmat(\qv)^\top\Fv .
+\label{eq:eom}
+\end{equation}
+The generalized inertia matrix $\Mmat(\qv)=\sum_k\big[\Jmat_{v,k}^\top m_k\Jmat_{v,k}+\Jmat_{\omega,k}^\top\bm{I}_k\Jmat_{\omega,k}\big]$ contains every moving body (plate, upper triangle and leg segments). The vector $\bm{h}$ collects gravity and the Coriolis and centrifugal terms, the latter quadratic in $\dot{\qv}$. The inverse-kinematics Jacobian $\Jmat(\qv)=\partial\bm{\ell}/\partial\qv$, with $\bm{\ell}$ the leg lengths, has rows $\bm{u}_i^\top\partial\bm{p}_i/\partial\qv$, where $\bm{u}_i=(\bm{p}_i-\bm{b}_i)/\ell_i$ is the unit vector from the base anchor $\bm{b}_i$ to the plate anchor $\bm{p}_i$. Equation~\eqref{eq:eom} defines a nonlinear, configuration-dependent MIMO plant.
+
+Evaluated at the assembled pose $\qv_0$ with the plate at rest, $\Mmat$, $\bm{h}$ and $\Jmat$ become constant and every velocity-dependent term vanishes identically, so that
+\begin{equation}
+\begin{gathered}
+\ddot{\qv}=\W\Fv+\cv,\\
+\W=\Mmat(\qv_0)^{-1}\Jmat(\qv_0)^\top,\qquad \cv=-\Mmat(\qv_0)^{-1}\bm{h}(\qv_0,\bm{0}).
+\end{gathered}
+\label{eq:affine}
+\end{equation}
+This affine relation between forces and accelerations is exact at that point, not a linearization; it only assumes rigid bodies and evaluation at rest, both of which hold by construction at the start of a simulation from the assembled configuration. The Gr\"ubler--Kutzbach criterion applied to the Simscape topology ($N=14$ links, $j=15$ joints, $\sum f_i=15$ joint freedoms) gives $6(N-1-j)+\sum f_i=3$ DOF for the plate. The yaw freedom of the base joint is unactuated and unmeasured, and lies outside the model.
+
+\subsection{Limitations of the simplified analytic model}
+\label{sec:whyfail}
+The previous stage \cite{perez2025stage2} took the plate as a free rigid body, $J_x\ddot\alpha=\tau_x$, $J_y\ddot\theta=\tau_y$, $M\ddot z=F_z$, with the bare-plate inertias $J_x=J_y=6.194\un{kg\,m^2}$ and $M=67.71\un{kg}$, and mapped the actuator forces to generalized efforts through a constant allocation matrix,
+\begin{equation}
+\begin{bmatrix}\tau_x\\ \tau_y\\ F_z\end{bmatrix}=\bm{T}\Fv,\qquad
+\bm{T}_{(:,i)}=u_z\begin{bmatrix}R_t\sin\varphi_i\\ -R_t\cos\varphi_i\\ 1\end{bmatrix},
+\label{eq:Told}
+\end{equation}
+so that $\W_\mathrm{assumed}=\mathrm{diag}(J_x,J_y,M)^{-1}\bm{T}$. Both factors are incorrect, and independently so.
+
+The vertical direction cosine was taken as that of the normal to a face of the base pyramid, $u_z=R_b/\sqrt{R_b^2+4H^2}=0.509$, which describes a real part of the mechanism but not the direction along which an actuator pushes. The actuators act along the line joining a base anchor to a plate anchor $1.57\un{m}$ above it, for which the assembled model gives $u_z=0.826$, i.e. $34.3^\circ$ instead of $59.4^\circ$ from vertical, a factor of $1.62$ (Fig.~\ref{fig:uz}). The inertia factor is wrong because the plate is the moving platform of a closed-chain mechanism: tilting it requires all legs to change length and swing, and translates the plate laterally, so every leg body contributes to $\Mmat$. With the analytic geometry, the tilt inertia consistent with the measurements of Section~\ref{sec:ident} is about $57.8\un{kg\,m^2}$, nine times the bare-plate value and plausibly bracketed by the bare disc ($6.2\un{kg\,m^2}$) and a $67.7\un{kg}$ point mass at the plate height ($mL^2=167\un{kg\,m^2}$).
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.78\columnwidth]{pics/fig04_uz_comparison.png}
+\caption{Candidate actuator directions. The simplified model used the normal to a face of the base pyramid; the actuators run between anchors. Their vertical projections differ by a factor of $1.62$.}
+\label{fig:uz}
+\end{figure}
+
+Scaling the identified map back through the nominal inertias, $\bm{T}_\mathrm{ident}=\mathrm{diag}(J_x,J_y,M)\W$, allows a direct comparison,
+\begin{equation}
+\begin{gathered}
+\bm{T}_\mathrm{assumed}=\begin{bmatrix}
+-0.165 & 0.331 & -0.165\\
+-0.286 & 0 & 0.286\\
+0.509 & 0.509 & 0.509\end{bmatrix},\\
+\bm{T}_\mathrm{ident}=\begin{bmatrix}
+-0.017 & 0.036 & -0.018\\
+-0.031 & 0.000 & 0.030\\
+0.835 & 0.826 & 0.816\end{bmatrix},
+\end{gathered}
+\label{eq:Tcompare}
+\end{equation}
+which differ by $71.4\%$ in Frobenius norm. The comparison also shows what survives: the third row of $\bm{T}_\mathrm{ident}$ is uniform within $2.3\%$, as the symmetric arrangement requires, and the $(2,2)$ entry vanishes in both matrices, since the $90^\circ$ leg has no moment arm about the pitch axis. The azimuthal structure of the earlier model was correct and only its scaling was wrong. This is the expected failure of the free-platform simplification, which is adequate for serial or lightly loaded mechanisms but not for a closed chain whose legs are comparable in mass and length to the plate.
+
+Moreover, input--output data determine only the product $\W=\Mmat^{-1}\Jmat^\top$: assuming the bare-plate inertia yields $\Jmat^\top=\bm{T}_\mathrm{ident}$, assuming the analytic geometry yields $\Mmat=\mathrm{diag}(57.8,57.9,41.7)$, and both reproduce every measurement. A full derivation through \eqref{eq:eom} would require the anchor coordinates and mass properties of about eleven bodies from CAD, and would still need validation against measurements, so $\W$ is measured directly.
+
+\subsection{Digital twin}
+The digital twin (Fig.~\ref{fig:twin}) was built in Simscape Multibody \cite{simscape} from the SolidWorks assembly, preserving the masses, inertias and joint topology of the mechanism, and integrates the wave model and the sensor models of Section~\ref{sec:system}. The plant subsystem has the three actuator forces as inputs and roll, pitch, heave and their rates as outputs, with angles reported in degrees; the conversion $\bm{S}=\mathrm{diag}(\pi/180,\pi/180,\pi/180,\pi/180,1,1)$ is applied ahead of the controller, since an unnoticed factor of $57.3$ in the feedback path would act as a gain error. The model is integrated with \texttt{ode23t} at $\mathrm{RelTol}=10^{-4}$ and $\mathrm{AbsTol}=10^{-6}$; tolerances of $10^{-2}$, used in earlier versions, are looser than the controlled signals themselves, which are of order $10^{-3}\un{rad}$.
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=\columnwidth]{pics/fig05_digital_twin.png}
+\caption{Digital twin of MARLUP in Simscape Multibody: mechanism, wave input through the four-DOF base joint and sensor models.}
+\label{fig:twin}
+\end{figure}
+
+% ==================================================================
+\section{Plant identification}
+\label{sec:ident}
+
+\subsection{Experiment design}
+The affine map \eqref{eq:affine} has twelve unknowns, nine in $\W$ and three in $\cv$, and is therefore fixed by its value at four points. Four simulations are run from rest at $\qv_0$ with a flat sea, the feedback path opened and the allocation gain set to identity, so that a constant block injects the actuator forces directly (Fig.~\ref{fig:idsetup}). With $\bm{e}_i$ the $i$-th unit vector and a probe force $\delta F$,
+\begin{equation}
+\Fv=\bm{0}\Rightarrow\ddot{\qv}=\cv,\qquad
+\Fv=\delta F\,\bm{e}_i\Rightarrow\W_{(:,i)}=\frac{\ddot{\qv}_i-\cv}{\delta F},
+\label{eq:runs}
+\end{equation}
+and the force that holds the plate stationary follows from $\ddot{\qv}=\bm{0}$ as
+\begin{equation}
+\Fv_\mathrm{trim}=-\W^{-1}\cv .
+\label{eq:Ftrim}
+\end{equation}
+A fifth run with $\Fv=\delta F[1\ 1\ 1]^\top$ is not used for fitting: it is predicted from the other four and then measured, which makes the affine assumption falsifiable, since an engaged joint limit or an appreciable change of configuration during the window would make the prediction miss. The probe $\delta F=400\un{N}$ is large enough for the resulting accelerations to dominate solver noise and small enough for the plate to move only microns during the measurement. Only controller-path parameters are altered, and they are restored automatically on exit, including on error; the plant subsystem is never modified.
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.95\columnwidth]{pics/fig06_ident_setup.png}
+\caption{Configuration for the identification runs: feedback gain and reference zeroed, allocation gain set to identity, and significant wave height set to zero so that the base is stationary.}
+\label{fig:idsetup}
+\end{figure}
+
+\subsection{Recovery of accelerations}
+The plant outputs positions and velocities. Differentiating a velocity signal numerically amplifies solver noise, and filtering it introduces a lag that biases the very quantity being measured. Under a constant force applied from rest, however, each velocity satisfies $v(t)=\ddot q(0)\,t+\mathcal{O}(t^2)$, so the acceleration is the slope at the origin. Minimizing $\sum_k(v_k-a\,t_k)^2$ with the intercept constrained to zero gives
+\begin{equation}
+\ddot q=\frac{\sum_k t_k v_k}{\sum_k t_k^2},
+\label{eq:slope}
+\end{equation}
+which has no tuning parameters and introduces no lag. The fit window is $t\in[4,40]\un{ms}$ (Fig.~\ref{fig:fit}): the lower bound discards four time constants of the $1\un{ms}$ input filter of the physical-signal conversion, and the upper bound keeps the quadratic term negligible. These runs use \texttt{ode23t} with a maximum step of $0.5\un{ms}$, $\mathrm{RelTol}=10^{-6}$ and $\mathrm{AbsTol}=10^{-8}$, which guarantees at least 70 samples in the window. Each run lasts $60\un{ms}$ of simulated time, and the complete identification takes about $5\un{s}$ of computation.
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=\columnwidth]{pics/fig07_ident_fit.png}
+\caption{Roll rate in the four identification runs. Each trace is a straight line through the origin whose slope, obtained from \eqref{eq:slope}, gives one entry of $\ddot{\qv}$.}
+\label{fig:fit}
+\end{figure}
+
+\subsection{Identified model and validation}
+Table~\ref{tab:accs} lists the measured accelerations. Applying \eqref{eq:runs} and \eqref{eq:Ftrim},
+\begin{equation}
+\W=10^{-3}\!\begin{bmatrix}
+-2.772 & 5.739 & -2.924\\
+-5.027 & 0.007 & 4.872\\
+12.336 & 12.191 & 12.054
+\end{bmatrix},\quad
+\cv=\begin{bmatrix}-0.036\\ 0.224\\ -9.924\end{bmatrix},
+\label{eq:Wnum}
+\end{equation}
+with rows in $\mathrm{rad\,s^{-2}N^{-1}}$ (roll, pitch) and $\mathrm{m\,s^{-2}N^{-1}}$ (heave), $\Fv_\mathrm{trim}=[288.5\ \ 273.7\ \ 251.3]^\top\un{N}$, $\det\W=1.04\times10^{-6}$ and $\mathrm{cond}(\W)=3.02$. The free-fall bias $c_3=-9.924\un{m/s^2}$ exceeds $g$ because the unpowered plate also drags the leg linkage, a first confirmation that the linkage inertia is not negligible.
+
+\begin{table}[H]
+\centering
+\caption{Measured generalized accelerations (rad/s$^2$, rad/s$^2$, m/s$^2$).}
+\label{tab:accs}
+\footnotesize
+\begin{tabular}{@{}lrrrl@{}}
+\toprule
+$\Fv^\top$ (N) & $\ddot\alpha$ & $\ddot\theta$ & $\ddot z$ & gives\\
+\midrule
+$[0\ \ 0\ \ 0]$       & $-0.0360$ & $0.2242$  & $-9.9244$ & $\cv$\\
+$[400\ \ 0\ \ 0]$     & $-1.1448$ & $-1.7867$ & $-4.9902$ & $\W_{(:,1)}$\\
+$[0\ \ 400\ \ 0]$     & $2.2596$  & $0.2271$  & $-5.0479$ & $\W_{(:,2)}$\\
+$[0\ \ 0\ \ 400]$     & $-1.2055$ & $2.1730$  & $-5.1029$ & $\W_{(:,3)}$\\
+\midrule
+$[400\ 400\ 400]$     & $-0.0187$ & $0.1653$  & $4.7157$  & check\\
+\bottomrule
+\end{tabular}
+\end{table}
+
+Table~\ref{tab:valid} summarizes the validation battery. The superposition prediction, $\W[400\ 400\ 400]^\top+\cv=[-0.0187\ \ 0.1650\ \ 4.7078]^\top$, matches the measured fifth run with a relative error of $1.68\times10^{-3}$; since the plate then accelerates upward at $4.72\un{m/s^2}$, the probe straddles the trim point, which is the regime in which the controller operates. The static closure compares the trim forces resolved along the identified leg direction, $(\sum_iF_{\mathrm{trim},i})\,\bar u_z=813.48\times0.826=671.93\un{N}$, with the weight implied by the free-fall run, $M|c_3|=671.97\un{N}$; because $\bar u_z$ is itself derived from the third row of $\W$, this is a consistency check bounded by the $2.3\%$ spread of that row rather than a fully independent test. The pitch entry of the $90^\circ$ leg, $W_{22}=7.25\times10^{-6}$, is five orders of magnitude below the largest entry and is therefore numerically zero, as the geometry requires. Finally, the low condition number shows that $\qv_0$ is far from a kinematic singularity. An analytic linearization of the Simscape model, in which the first Markov parameter $\Cmat\Bmat$ of the velocity outputs equals $\W$, provides an independent algorithmic cross-check. \todo{report the Route C (\texttt{linearize}) comparison or remove this sentence.}
+
+\begin{table}[H]
+\centering
+\caption{Validation of the identified model.}
+\label{tab:valid}
+\footnotesize
+\begin{tabularx}{\columnwidth}{@{}>{\raggedright\arraybackslash}p{2.2cm}LL@{}}
+\toprule
+Check & Result & Rules out\\
+\midrule
+Superposition prediction & $1.68\times10^{-3}$ rel.\ error & nonlinearity, active joint limits\\
+Static equilibrium & $671.93$ vs $671.97$ N & sign and routing errors\\
+Zero arm of $90^\circ$ leg & $W_{22}/\max|W_{ij}|=5.9\times10^{-4}$ & wrong leg assignment\\
+Inter-leg symmetry & $2.3\%$ spread in $\W_{(3,:)}$ & mis-assembled leg\\
+Conditioning & $\mathrm{cond}(\W)=3.02$, $\mathrm{rank}\,\mathcal{C}=6$ & kinematic singularity\\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+The procedure is non-invasive, reproducible and falsifiable, and requires only the \texttt{sim} command.
+
+\subsection{State-space model}
+With $\xv=[\alpha\ \dot\alpha\ \theta\ \dot\theta\ z\ \dot z]^\top$ and the input in deviation form, $\uv=\Fv-\Fv_\mathrm{trim}$, the plant is
+\begin{equation}
+\dot{\xv}=\Amat\xv+\Bmat\uv,\qquad \bm{y}=\Cmat\xv,
+\label{eq:ss}
+\end{equation}
+with $\Amat=\mathrm{blkdiag}(\bm{A}_0,\bm{A}_0,\bm{A}_0)$, $\bm{A}_0=[0\ 1;\,0\ 0]$, $\Bmat$ having zero odd rows and the rows of $\W$ as its even rows, and $\Cmat$ selecting $\alpha$, $\theta$ and $z$. The matrix $\Amat$ encodes only kinematics: the mechanism has no springs and negligible joint damping ($1.5\times10^{-4}\un{N\,s/m}$), gravity enters as the constant $\cv$ cancelled by $\Fv_\mathrm{trim}$, and all cross-coupling lies in the measured off-diagonal entries of $\W$. The model therefore consists of three double integrators driven through a single, fully coupled input matrix. The controllability matrix has rank 6, which follows directly from $\W$ being nonsingular, and the pair $(\Amat,\Cmat)$ is observable, so the rates can be reconstructed from the three measured positions. The model is valid near $\qv_0$, within a heave range bounded by the actuator stroke, estimated at $z_0\pm0.13\un{m}$, and a few degrees of tilt. \todo{verify the $\pm0.13$ m range against the stroke limits.}
+
+% ==================================================================
+\section{Control and estimation design}
+\label{sec:control}
+
+\subsection{Decoupling and allocation}
+Since $\W$ is square and well conditioned, the virtual input
+\begin{equation}
+\bm{v}=\W(\Fv-\Fv_\mathrm{trim})\quad\Longrightarrow\quad\ddot{\qv}=\bm{v}
+\label{eq:virtual}
+\end{equation}
+turns the plant into three independent unit double integrators, and the actuator forces are recovered as $\Fv=\Fv_\mathrm{trim}+\W^{-1}\bm{v}$. This is the role the inverse allocation $\bm{T}^{-1}$ played in the previous design, now with a measured rather than an assumed matrix. The condition number $3.02$ bounds the amplification of identification errors by the inversion to a factor of three; for a poorly conditioned map, say $\mathrm{cond}(\W)>20$, the design should instead be carried out directly on $(\Amat,\Bmat)$.
+
+\subsection{Integral LQR}
+One integral state per controlled output, $\dot{\bm\xi}=\bm{r}-\Cmat\xv$, removes the steady-state error caused by the mean component of the disturbance and by any residual mismatch in $\Fv_\mathrm{trim}$, which would otherwise appear directly as a standing heave offset. The augmented pair is
+\begin{equation}
+\Amat_a=\begin{bmatrix}\Amat & \bm{0}_{6\times3}\\ -\Cmat & \bm{0}_{3\times3}\end{bmatrix},\qquad
+\Bmat_a=\begin{bmatrix}\Bmat\\ \bm{0}_{3\times3}\end{bmatrix},
+\label{eq:augment}
+\end{equation}
+and the controller minimizes \cite{anderson1990}
+\begin{equation}
+\mathcal{J}=\int_0^\infty\left(\xv^\top\bm{Q}\xv+\bm\xi^\top\bm{Q}_i\bm\xi+\uv^\top\bm{R}\uv\right)\dd t,
+\label{eq:cost}
+\end{equation}
+with $\bm{Q}$ and $\bm{Q}_i$ diagonal and $\bm{R}=\W^\top\W$. From \eqref{eq:virtual}, this choice gives $\uv^\top\bm{R}\uv=\bm{v}^\top\bm{v}$, so the controller is charged for the generalized acceleration it commands rather than for newtons. Since the effective inertias of the three axes differ by about an order of magnitude, a newton spent on heave and a newton spent on roll buy very different control authority, and weighting them equally would silently over-penalize the stiffer axis. The choice also separates the $9\times9$ Riccati equation exactly into three scalar-input problems. The resulting law is
+\begin{equation}
+\Fv=\Fv_\mathrm{trim}+\Kmat_x(\xv_\mathrm{ref}-\xv)+\Kmat_i\bm\xi .
+\label{eq:law}
+\end{equation}
+
+\subsection{Bandwidth and closed-form weights}
+A feedback loop rejects disturbances below its bandwidth and follows them above it, so the closed-loop bandwidth must lie well above the wave peak $\omega_p=0.628\un{rad/s}$. The previous design sat at about $0.65\un{rad/s}$, essentially the bandwidth of the sea, and therefore tracked the waves instead of rejecting them, which alone explains its observed behavior. Each axis is now specified by $(s^2+2\zeta\omega_n s+\omega_n^2)(s+\omega_i)=s^3+k_ds^2+k_ps+k_i$, whose coefficients give the per-axis gains of the unit double integrator,
+\begin{equation}
+k_d=2\zeta\omega_n+\omega_i,\quad k_p=\omega_n^2+2\zeta\omega_n\omega_i,\quad k_i=\omega_n^2\omega_i,
+\label{eq:kpkdki}
+\end{equation}
+with the values in Table~\ref{tab:spec}. The natural frequencies place the loop $4.8$ and $6.4$ times above $\omega_p$; the upper limit comes from actuator bandwidth and solver cost rather than from the algebra.
+
+The weights are not hand-tuned: they are those for which the LQR places its poles exactly on this specification. For one decoupled axis, $\ddot q=v$ with $\dot\xi=-q$, weights $(q_\alpha,q_d,q_i)$ on position, rate and integral, and unit input weight (which is what $\bm{R}=\W^\top\W$ delivers in virtual coordinates), the transfer from $v$ to the states is $\bm{G}(s)=[1/s^2\ \ 1/s\ \ {-1/s^3}]^\top$. The optimal poles are the stable roots of the return-difference equation $1+\bm{G}(-s)^\top\bm{Q}_\mathrm{axis}\bm{G}(s)=0$ \cite{kwakernaak1972}, which reduces to
+\begin{equation}
+s^6-q_d\,s^4+q_\alpha\,s^2-q_i=0 .
+\label{eq:rd}
+\end{equation}
+Requiring these roots to coincide with those of $\phi(s)=s^3+k_ds^2+k_ps+k_i$ means that \eqref{eq:rd} must equal $-\phi(s)\phi(-s)=s^6-(k_d^2-2k_p)s^4-(2k_dk_i-k_p^2)s^2-k_i^2$, so that $q_d=k_d^2-2k_p$, $q_\alpha=k_p^2-2k_dk_i$ and $q_i=k_i^2$. Substituting \eqref{eq:kpkdki},
+\begin{equation}
+\begin{aligned}
+q_\alpha&=\omega_n^2\left[\omega_n^2+2\omega_i^2(2\zeta^2-1)\right],\\
+q_d&=2\omega_n^2(2\zeta^2-1)+\omega_i^2,\qquad q_i=\omega_n^4\omega_i^2 .
+\end{aligned}
+\label{eq:weights}
+\end{equation}
+Positive semidefiniteness requires $2\zeta^2-1\geq0$, i.e. $\zeta\geq1/\sqrt2$, a second and independent reason for $\zeta=0.9$. For the roll axis, $2\zeta^2-1=0.62$ gives $q_d=11.72$, $q_\alpha=87.28$ and $q_i=45.56$.
+
+\begin{table}[H]
+\centering
+\caption{Closed-loop specification, LQR weights and equivalent per-axis gains.}
+\label{tab:spec}
+\footnotesize
+\setlength{\tabcolsep}{3.2pt}
+\begin{tabular}{@{}lccccccccc@{}}
+\toprule
+Axis & $\omega_n$ & $\zeta$ & $\omega_i$ & $q_\alpha$ & $q_d$ & $q_i$ & $k_p$ & $k_d$ & $k_i$\\
+\midrule
+Roll  & 3.0 & 0.9 & 0.75 & 87.28  & 11.72 & 45.56  & 13.05 & 6.15 & 6.75\\
+Pitch & 3.0 & 0.9 & 0.75 & 87.28  & 11.72 & 45.56  & 13.05 & 6.15 & 6.75\\
+Heave & 4.0 & 0.9 & 1.00 & 275.84 & 20.84 & 256.00 & 23.20 & 8.20 & 16.00\\
+\bottomrule
+\end{tabular}
+\end{table}
+
+Solving the algebraic Riccati equation for \eqref{eq:augment} and \eqref{eq:cost} gives $\Kmat_a=\bm{R}^{-1}\Bmat_a^\top\bm{P}=[\Kmat_x\ \ {-\Kmat_i}]$. These gains coincide with the pole-placement construction $\Kmat_x=\W^{-1}\mathrm{blkdiag}([k_p\ k_d])$, $\Kmat_i=\W^{-1}\mathrm{diag}(k_i)$ to relative differences of $3\times10^{-14}$ and $5\times10^{-14}$, and the closed-loop eigenvalues are $-2.70\pm1.31\mathrm{j}$ (roll and pitch), $-3.60\pm1.74\mathrm{j}$ (heave), $-0.75$ (twice) and $-1.00$, exactly on the specification (Fig.~\ref{fig:poles}). By contrast, the earlier design bisected a scalar $\rho$ in $\bm{R}=\rho\bm{I}$ until the slowest pole met a bandwidth target; with integral augmentation the slow poles converge to transmission zeros fixed by the ratio $\bm{Q}_i/\bm{Q}$, which $\rho$ does not affect, so the search ran to its lower bracket $\rho=10^{-9}$ and returned gains of order $6\times10^8$.
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.95\columnwidth]{pics/fig08_poles.png}
+\caption{Closed-loop eigenvalues. All lie on the $\zeta=0.9$ rays or on the real axis, well to the left of the wave peak frequency.}
+\label{fig:poles}
+\end{figure}
+
+\subsection{State estimation}
+Only $\alpha$, $\theta$ and $z$ are measured, so the rates in \eqref{eq:law} are reconstructed by a discrete KF \cite{kalman1960} designed on the ZOH discretization of \eqref{eq:ss} at $T_s=10\un{ms}$,
+\begin{equation}
+\hat{\xv}_{k|k}=\hat{\xv}_{k|k-1}+\bm{L}_k\left(\bm{y}_k-\Cmat\hat{\xv}_{k|k-1}\right),
+\label{eq:kf}
+\end{equation}
+with the measurement covariance set from the sensor noise of Section~\ref{sec:system} and the process covariance representing the unmodeled wave forcing. The measurement covariance must reflect the physical sensor noise: an overestimated value makes the filter ignore the measurements and trust the model, which is the failure observed with the earlier estimator \cite{perez2025stage2}. \todo{final estimator form (KF or EKF), covariances, steady-state gain, and estimation error versus the ideal sensor in the digital twin.}
+
+\subsection{Discrete implementation}
+The controller is discretized at $T_s=10\un{ms}$, the integral states are updated by forward Euler with an anti-windup gain $\beta_{aw}=1$, and the command is saturated at the cylinder force limit. The design is applied to the digital twin by changing four block parameters, without structural edits: the feedback gain becomes $\Kmat_x\bm{S}$, which absorbs both the state feedback and the $\W^{-1}$ allocation; the former allocation gain $\bm{T}^{-1}$ becomes the identity; the feedforward becomes $\Fv_\mathrm{trim}$ instead of about $64\un{N}$ per actuator; and the reference sets the commanded height. Fig.~\ref{fig:arch} shows the complete loop. \todo{confirm discretization of the integrator.}
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=\columnwidth]{pics/fig09_control_architecture.png}
+\caption{Closed-loop architecture. The feedforward $\Fv_\mathrm{trim}$ cancels gravity, $\Kmat_x$ and $\Kmat_i$ include the allocation $\W^{-1}$, and the KF reconstructs the rates from the sampled measurements.}
+\label{fig:arch}
+\end{figure}
+
+% ==================================================================
+\section{Processor-in-the-Loop implementation}
+\label{sec:pil}
+% ------------------------------------------------------------------
+% RESERVED SECTION. Budget: about 1.5 pages including Figs. 10-11 and Table 6.
+% ------------------------------------------------------------------
+
+\subsection{Setup}
+In the PiL configuration the discretized controller and estimator run on an embedded microcontroller, while the digital twin, including waves and sensor models, runs on the host computer. The two exchange the sampled measurements and the actuator commands every $T_s$ through a serial link (Fig.~\ref{fig:pilsetup}). \todo{target board, clock, toolchain (Embedded Coder or support package), communication protocol and baud rate, synchronization with the host.}
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=\columnwidth]{pics/fig10_pil_setup.png}
+\caption{PiL configuration: host computer running the digital twin and microcontroller executing the control law and estimator.}
+\label{fig:pilsetup}
+\end{figure}
+
+\subsection{Execution metrics}
+\todo{describe the code generation flow and report the metrics of Table~\ref{tab:pil}.}
+
+\begin{table}[H]
+\centering
+\caption{PiL execution metrics.}
+\label{tab:pil}
+\footnotesize
+\begin{tabularx}{\columnwidth}{@{}Xl@{}}
+\toprule
+Metric & Value\\
+\midrule
+Target microcontroller and clock & \todo{}\\
+Sampling period $T_s$ & $10$ ms\\
+Average / worst-case execution time & \todo{}\\
+CPU load at $T_s$ & \todo{}\\
+Flash / RAM usage & \todo{}\\
+Max.\ SiL--PiL output difference & \todo{}\\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+\subsection{SiL versus PiL}
+\todo{compare the SiL and PiL responses of roll, pitch and heave under the same wave realization (Fig.~\ref{fig:pilsil}) and discuss numerical precision and timing effects.}
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=\columnwidth]{pics/fig11_sil_vs_pil.png}
+\caption{Roll, pitch and heave under P--M waves with the controller executed in SiL and in PiL.}
+\label{fig:pilsil}
+\end{figure}
+
+% ==================================================================
+\section{Results and discussion}
+\label{sec:results}
+
+\subsection{Disturbance rejection}
+For each decoupled axis the loop transfer is $L(s)=(k_ds^2+k_ps+k_i)/s^3$, so the output sensitivity is
+\begin{equation}
+S(s)=\frac{1}{1+L(s)}=\frac{s^3}{s^3+k_ds^2+k_ps+k_i}.
+\label{eq:sens}
+\end{equation}
+Its triple zero at the origin gives $60\un{dB/decade}$ of attenuation at low frequency, which is the structural reason why an integral-augmented double integrator rejects slow wave motion so effectively. Fig.~\ref{fig:sens} and Table~\ref{tab:atten} compare the proposed and previous designs at the wave peak: the attenuation improves by factors of $19$ and $40$. This improvement is not the result of finer tuning but of placing the bandwidth deliberately, which in turn requires a correct plant model.
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=\columnwidth]{pics/fig12_sensitivity.png}
+\caption{Output sensitivity of the proposed design ($\omega_n=3$ rad/s for roll and pitch, $4$ rad/s for heave) and of the previous design ($\omega_n\approx0.65$ rad/s), with the P--M spectrum shown for reference.}
+\label{fig:sens}
+\end{figure}
+
+\begin{table}[H]
+\centering
+\caption{Attenuation at the wave spectral peak $\omega_p=0.628$ rad/s.}
+\label{tab:atten}
+\footnotesize
+\begin{tabular}{@{}lccc@{}}
+\toprule
+Design & $|S(j\omega_p)|$ & dB & Improvement\\
+\midrule
+Previous, $\omega_n\approx0.65$ rad/s & $0.520$ & $-5.7$ & baseline\\
+Roll/pitch, $\omega_n=3$ rad/s & $0.027$ & $-31.2$ & $19\times$\\
+Heave, $\omega_n=4$ rad/s & $0.013$ & $-37.8$ & $40\times$\\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\subsection{Reference tracking and actuator authority}
+The loop is designed as a regulator, whose main task is disturbance rejection; reference tracking is a secondary property. With a direct reference, the numerator zero introduced by the integral action at $s=-k_i/k_p$ ($-0.517\un{rad/s}$ for roll and pitch, $-0.690\un{rad/s}$ for heave) produces a $19.9\%$ overshoot with $2\%$ settling times of $4.8\un{s}$ and $3.6\un{s}$ (Fig.~\ref{fig:step}a). A first-order prefilter that cancels this zero,
+\begin{equation}
+r_f(s)=\frac{k_i/k_p}{s+k_i/k_p}\,r(s),
+\label{eq:prefilter}
+\end{equation}
+yields a monotone response settling in $5.9\un{s}$ and $4.4\un{s}$, dominated by the integrator pole. Either choice suits a constant height reference; the prefilter is preferred if the reference is slewed. For a $1^\circ$ roll step the actuator forces deviate by about $13\un{N}$ on legs 1 and 3 and $27\un{N}$ on leg 2 from a static trim of $251$--$289\un{N}$ (Fig.~\ref{fig:step}b), i.e. about $10\%$ of the trim for a $1^\circ$ error, the right order of magnitude for this machine, whereas the previous design demanded of order $10^8\un{N/rad}$. Over an envelope of $2^\circ$ tilt, $10^\circ/\mathrm{s}$ tilt rate, $8\un{cm}$ heave and $0.4\un{m/s}$ heave rate, the commanded forces remain within $[-136,669]\un{N}$, well inside the $\pm3\un{kN}$ capability of the cylinder.
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=\columnwidth]{pics/fig13_step_forces.png}
+\caption{(a) Closed-loop step responses with direct reference (solid) and with prefilter (dashed). (b) Actuator forces during a $1^\circ$ roll reference step.}
+\label{fig:step}
+\end{figure}
+
+\subsection{Closed-loop digital twin under waves}
+\todo{report the digital twin response under the P--M sea state (Fig.~\ref{fig:dtwaves}): RMS and peak roll, pitch and heave errors with and without control, settling from the initial condition, actuator forces and stroke usage, and drift of the free yaw.}
+
+\begin{figure*}[t]
+\centering
+\includegraphics[width=\textwidth]{pics/fig14_digital_twin_waves.png}
+\caption{Closed-loop digital twin under P--M waves: roll, pitch, heave and actuator forces, with the uncontrolled base motion shown for reference.}
+\label{fig:dtwaves}
+\end{figure*}
+
+\subsection{Comparison with previous approaches}
+Table~\ref{tab:compare} compares the three control stages of MARLUP. Replacing the three decentralized PID loops by a single state-feedback law reduced the simulation cost of $10\un{s}$ of response from $5$--$13\un{h}$ to about $1$--$2\un{min}$ \cite{perez2025stage2}, and the identified model is what turns that computational gain into a stable and well-damped closed loop.
+
+\begin{table}[H]
+\centering
+\caption{Comparison of the MARLUP control stages.}
+\label{tab:compare}
+\footnotesize
+\begin{tabularx}{\columnwidth}{@{}>{\raggedright\arraybackslash}p{1.45cm}LLL@{}}
+\toprule
+ & PID \cite{gonzalez2025} & LQR+KF \cite{perez2025stage2} & This work\\
+\midrule
+Plant model & none (tuned on twin) & analytic, simplified & identified from twin\\
+Waves & sinusoidal & P--M & P--M\\
+Sensors & ideal & noisy, quantized & noisy, quantized\\
+$|S(j\omega_p)|$ & \todo{} & $-5.7$ dB & $-31$ to $-38$ dB\\
+Result on twin & stable, gains up to $10^{15}$ & marginal, ${\approx}20$ s & \todo{}\\
+Sim.\ time (10 s) & $5$--$13$ h & $1$--$2$ min & \todo{}\\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+\subsection{Limitations}
+The model is exact only at $\qv_0$; repeating the identification at other heights would convert its validity range from an estimate into a measured bound. The actuators are ideal force sources, so hydraulic dynamics, friction and bandwidth limits are not represented, which is the main reason for keeping the closed loop at $3$--$4\un{rad/s}$ rather than faster. The double-integrator structure of $\Amat$ is asserted rather than identified, the Euler angles coincide with body roll and pitch only near level, and the unactuated yaw of the base joint may drift in long simulations and rotate the actuator frame away from the measurement frame. Lift-off loads are not yet included. \todo{add any limitation revealed by the PiL runs.}
+
+% ==================================================================
+\section{Conclusions}
+\label{sec:concl}
+An actively stabilized floating launch platform for small rockets was developed at the level of a validated digital twin and embedded controller. The analysis showed that the free-platform rigid-body simplification misrepresents a closed-chain mechanism with heavy legs by $71\%$, and that the map from actuator forces to accelerations can instead be identified exactly at the operating point from four short simulations, without modifying the plant and with an independent prediction as validation. On the identified model, an integral LQR with closed-form weights places the bandwidth five to six times above the wave spectral peak and attenuates the dominant wave motion by $31$ to $38$ dB, with actuator demands of the correct order of magnitude, and was executed in PiL together with the state estimator. \todo{summarize the PiL and digital-twin wave results.} Future work comprises the modeling of the hydraulic actuators, gain scheduling over the stroke, the inclusion of lift-off loads and hardware-in-the-loop tests leading to a scaled prototype at sea.
+
+\section*{Acknowledgements}
+The authors thank TECSpace and the School of Electronics Engineering of the Instituto Tecnol\'ogico de Costa Rica for supporting the MARLUP project, and the members of earlier MARLUP stages whose work is referenced here. \todo{complete acknowledgements and funding.}
+
+\bibliography{biblio}
+
+\end{document}
