@@ -10,9 +10,11 @@ gain = 1;
 % Piezas CAD (.SLDPRT) que cargan los bloques File Solid del modelo:
 % se agregan al path para que los bloques las encuentren por nombre,
 % sin rutas absolutas (funciona en cualquier máquina del equipo).
-addpath(fullfile(fileparts(mfilename('fullpath')), '..', '..', 'CAD'));
+here = fileparts(mfilename('fullpath'));
+addpath(fullfile(here, '..', '..', 'CAD'));
+addpath(here);   % para resolver MARLUP_hidraulico_params.m
 
-%% === Geometría / Asignación de actuadores ===
+%% === Geometría / Asignanción de actuadores ===
 H  = 0.11;          % [m]
 Rb = 0.13;          % [m]
 uz = Rb / sqrt(Rb^2 + 4*H^2);
@@ -31,6 +33,14 @@ Jx   = 6.19446;     % kg*m^2
 Jy   = 6.19446;     % kg*m^2
 M_Plato = 58.5349;     % kg
 Mass = M_Plato + 3*(0.492345 + 1.25618 + 0.667284) + 1.92617;
+
+%% === Actuador hidraulico (PISTON_MODEL) ===
+% Struct P que leen los bloques de PISTON_MODEL/ACTUADOR_HIDRAULICO:
+%   Actuador  -> P.stroke      Masa         -> P.mass
+%   Amortiguador -> P.damp     FuentePresion -> P.p_sys
+% Ojo: P.mass (58.19 kg, masa acoplada del paper) es independiente de
+% M_Plato; no son el mismo dato.
+P = MARLUP_hidraulico_params();
 
 %% === Planta ideal (sin amortiguamiento/rigidez) ===
 % x = [alpha  alpha_dot  theta  theta_dot  z  z_dot]^T
