@@ -21,9 +21,9 @@ if nargin < 2 || isempty(mdl), mdl = 'MARLUP_sinKF'; end
 
 load_system(mdl);
 
-set_param([mdl '/Gain'],      'Gain',  mat2str(des.K_model, 10));
+set_param([mdl '/LQR'],      'Gain',  mat2str(des.K_model, 10));
 %set_param([mdl '/Gain1'],     'Gain',  'eye(3)');
-set_param([mdl '/Fsat'], 'Value', mat2str(des.F_trim, 10));
+set_param([mdl '/F_trim'], 'Value', mat2str(des.F_trim, 10));
 set_param([mdl '/Referencias'],  'Value', mat2str(des.ref_model, 10));
 
 % Solver: the shipped settings (RelTol = AbsTol = 1e-2) are far too loose
