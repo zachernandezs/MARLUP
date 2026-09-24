@@ -1,0 +1,10 @@
+config load "D:\RESEARCH\MARLUP\MARLUP\FINAL MODEL\Paper_IAC\MARLUP_PiL\MARLUP_PiL.ioc"
+project toolchain STM32CubeIDE
+
+SetStructure Advanced
+
+project setCustomFWPath "C:\Users\alvar\STM32Cube\Repository\STM32Cube_FW_F4_V1.28.0"
+
+project generate 
+
+exit wait

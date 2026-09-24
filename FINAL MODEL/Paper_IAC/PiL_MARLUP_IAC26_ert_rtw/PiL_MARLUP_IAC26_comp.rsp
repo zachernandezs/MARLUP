@@ -1,0 +1,21 @@
+-I"D:/RESEARCH/MARLUP/MARLUP/FINAL MODEL/Paper_IAC"
+-I"D:/RESEARCH/MARLUP/MARLUP/FINAL MODEL/Paper_IAC/PiL_MARLUP_IAC26_ert_rtw"
+-ID:/Softwares/Matlab2026a/extern/include
+-ID:/Softwares/Matlab2026a/simulink/include
+-ID:/Softwares/Matlab2026a/rtw/c/src
+-ID:/Softwares/Matlab2026a/rtw/c/src/ext_mode/common
+-ID:/Softwares/Matlab2026a/rtw/c/ert
+-ID:/Softwares/Matlab2026a/toolbox/target/shared/armcortexmbase/scheduler/include
+-ID:/Softwares/Matlab2026a/toolbox/target/shared/armcortexmbase/xcp/include
+-ID:/Softwares/Matlab2026a/rtw/c/src/ext_mode/serial
+-ID:/Softwares/Matlab2026a/toolbox/stm32b/stm32shared/include
+-ID:/Softwares/Matlab2026a/toolbox/target/shared/svd/common/include
+-IC:/ProgramData/MATLAB/R2026a/cmsis/3P.instrset/cmsis.instrset/common/CMSIS/Core/Include
+-IC:/ProgramData/MATLAB/R2026a/cmsis/3P.instrset/cmsis_dsp.instrset/common/Include
+-IC:/ProgramData/MATLAB/R2026a/cmsis/3P.instrset/cmsis_dsp.instrset/common/Include/dsp
+-I"D:/RESEARCH/MARLUP/MARLUP/FINAL MODEL/Paper_IAC/MARLUP_PiL/Drivers/STM32F4xx_HAL_Driver/Inc"
+-I"D:/RESEARCH/MARLUP/MARLUP/FINAL MODEL/Paper_IAC/MARLUP_PiL/Drivers/STM32F4xx_HAL_Driver/Inc/Legacy"
+-I"D:/RESEARCH/MARLUP/MARLUP/FINAL MODEL/Paper_IAC/MARLUP_PiL/Drivers/CMSIS/Device/ST/STM32F4xx/Include"
+-I"D:/RESEARCH/MARLUP/MARLUP/FINAL MODEL/Paper_IAC/MARLUP_PiL/Drivers/CMSIS/Include"
+-I"D:/RESEARCH/MARLUP/MARLUP/FINAL MODEL/Paper_IAC/MARLUP_PiL/Core/Inc"
+-I../Core/Inc
